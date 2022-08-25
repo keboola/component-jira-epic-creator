@@ -1,0 +1,1 @@
+This application creates an epic with defined issues
