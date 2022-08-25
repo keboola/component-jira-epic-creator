@@ -1,1 +1,1 @@
-Jira is a issue tracking application
+Jira is an issue tracking application

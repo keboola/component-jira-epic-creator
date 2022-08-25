@@ -1,85 +1,98 @@
-"""
-Template Component main class.
-
-"""
 import csv
 import logging
-from datetime import datetime
+from jira import JIRA
+from jira.exceptions import JIRAError
+from jira.resources import Issue
+from typing import Generator, Optional
+
+from keboola.component.dao import TableDefinition
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 
-# configuration variables
 KEY_API_TOKEN = '#api_token'
-KEY_PRINT_HELLO = 'print_hello'
+KEY_PROJECT = 'project'
+KEY_SERVER = "server"
+KEY_USER_EMAIL = "user_email"
+KEY_EPIC_NAME = "epic_name"
 
-# list of mandatory parameters => if some is missing,
-# component will fail with readable message on initialization.
-REQUIRED_PARAMETERS = [KEY_PRINT_HELLO]
+REQUIRED_PARAMETERS = [KEY_API_TOKEN, KEY_PROJECT, KEY_SERVER, KEY_USER_EMAIL, KEY_EPIC_NAME]
 REQUIRED_IMAGE_PARS = []
 
 
 class Component(ComponentBase):
-    """
-        Extends base class for general Python components. Initializes the CommonInterface
-        and performs configuration validation.
-
-        For easier debugging the data folder is picked up by default from `../data` path,
-        relative to working directory.
-
-        If `debug` parameter is present in the `config.json`, the default logger is set to verbose DEBUG mode.
-    """
-
     def __init__(self):
         super().__init__()
 
     def run(self):
-        """
-        Main execution code
-        """
-
-        # ####### EXAMPLE TO REMOVE
-        # check for missing configuration parameters
         self.validate_configuration_parameters(REQUIRED_PARAMETERS)
         self.validate_image_parameters(REQUIRED_IMAGE_PARS)
         params = self.configuration.parameters
-        # Access parameters in data/config.json
-        if params.get(KEY_PRINT_HELLO):
-            logging.info("Hello World")
 
-        # get last state data/in/state.json from previous run
-        previous_state = self.get_state_file()
-        logging.info(previous_state.get('some_state_parameter'))
+        server = params.get(KEY_SERVER)
+        user_email = params.get(KEY_USER_EMAIL)
+        api_token = params.get(KEY_API_TOKEN)
+        jira_project = params.get(KEY_PROJECT)
+        epic_name = params.get(KEY_EPIC_NAME)
 
-        # Create output table (Tabledefinition - just metadata)
-        table = self.create_out_table_definition('output.csv', incremental=True, primary_key=['timestamp'])
+        issues_file = self.get_single_input_table()
 
-        # get file path of the table (data/out/tables/Features.csv)
-        out_table_path = table.full_path
-        logging.info(out_table_path)
+        jira_client = self.init_jira_client(server, user_email, api_token)
+        new_epic = self.create_new_epic(jira_client, jira_project, epic_name)
+        if issues_file:
+            self.create_epic_issues(jira_client, jira_project, new_epic, issues_file)
 
-        # DO whatever and save into out_table_path
-        with open(table.full_path, mode='wt', encoding='utf-8', newline='') as out_file:
-            writer = csv.DictWriter(out_file, fieldnames=['timestamp'])
-            writer.writeheader()
-            writer.writerow({"timestamp": datetime.now().isoformat()})
+    def get_single_input_table(self) -> Optional[TableDefinition]:
+        input_files = self.get_input_tables_definitions()
+        if len(input_files) == 0:
+            return None
+        if len(input_files) != 1:
+            raise UserException("Have 1 and only 1 input table in the input mapping")
+        return input_files[0]
 
-        # Save table manifest (output.csv.manifest) from the tabledefinition
-        self.write_manifest(table)
+    @staticmethod
+    def get_issue_definitions_from_table(issues_file: TableDefinition) -> Generator:
+        with open(issues_file.full_path, 'r') as in_file:
+            reader = csv.DictReader(in_file)
+            for line in reader:
+                yield line
 
-        # Write new state - will be available next run
-        self.write_state_file({"some_state_parameter": "value"})
+    @staticmethod
+    def init_jira_client(server: str, user_email: str, api_token: str) -> JIRA:
+        try:
+            jira_options = {'server': server}
+            return JIRA(options=jira_options, basic_auth=(user_email, api_token))
+        except JIRAError as jira_exc:
+            raise UserException("Failed to authenticate client, please revalidate your email and token") from jira_exc
 
-        # ####### EXAMPLE TO REMOVE END
+    @staticmethod
+    def create_new_epic(jira_client: JIRA, jira_project: str, epic_name: str) -> Issue:
+        try:
+            return jira_client.create_issue(project=jira_project,
+                                            customfield_10011=epic_name,
+                                            summary=epic_name,
+                                            issuetype={'name': 'Epic'})
+        except JIRAError as jira_exc:
+            raise UserException(
+                "Failed to create new epic, validate that the jira project name and epic name are valid") from jira_exc
+
+    def create_epic_issues(self, jira_client: JIRA, jira_project: str, epic: Issue,
+                           issues_file: TableDefinition) -> None:
+        for issue in self.get_issue_definitions_from_table(issues_file):
+            logging.info(f"Creating issue ")
+            try:
+                jira_client.create_issue(project=jira_project,
+                                         customfield_10014=epic.key,
+                                         summary=issue.get("issue_name"),
+                                         description=issue.get("issue_description"),
+                                         issuetype=issue.get("issue_type"))
+            except JIRAError as jira_exc:
+                raise UserException("Failed to create epic issue") from jira_exc
 
 
-"""
-        Main entrypoint
-"""
 if __name__ == "__main__":
     try:
         comp = Component()
-        # this triggers the run method by default and is controlled by the configuration.action parameter
         comp.execute_action()
     except UserException as exc:
         logging.exception(exc)

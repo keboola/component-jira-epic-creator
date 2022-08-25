@@ -1,19 +1,44 @@
 {
-  "type": "object",
-  "title": "extractor configuration",
-  "required": [
-    "print_hello"
-  ],
-  "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
-      "propertyOrder": 1
-    },
-    "debug": {
-      "type": "boolean",
-      "title": "Debug",
-      "propertyOrder": 2
-    }
-  }
+      "title": "Configuration Schema",
+      "type": "object",
+      "required": [
+            "user_email",
+            "#api_token",
+            "project",
+            "server",
+            "epic_name"
+      ],
+      "properties": {
+            "user_email": {
+                  "propertyOrder": 10,
+                  "title": "User email",
+                  "type": "string",
+                  "description": "Email of the user who create the API token"
+            },
+            "#api_token": {
+                  "propertyOrder": 20,
+                  "title": "Api token",
+                  "type": "string",
+                  "description": "API token created using <a href='https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/'>this guide</a>.",
+                  "format": "password"
+            },
+            "project": {
+                  "propertyOrder": 30,
+                  "title": "Project",
+                  "type": "string",
+                  "description": "Id of project to create the Epic in"
+            },
+            "server": {
+                  "propertyOrder": 40,
+                  "title": "Server",
+                  "type": "string",
+                  "description": "Link to Jira Cloud server, e.g. https://myjira.atlassian.net "
+            },
+            "epic_name": {
+                  "propertyOrder": 50,
+                  "title": "Epic name",
+                  "type": "string",
+                  "description": "Name of the epic to be created"
+            }
+      }
 }

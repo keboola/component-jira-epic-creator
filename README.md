@@ -1,7 +1,9 @@
 Jira Epic Creator
 =============
 
-Description
+Jira is an issue tracking application.
+
+This application creates an epic with defined issues.
 
 **Table of contents:**
 
@@ -9,49 +11,50 @@ Description
 
 Functionality notes
 ===================
+An input table can be used with the following structure:
+"issue_name","issue_description","issue_type"
+
+This will create child issues for the epic.
 
 Prerequisites
 =============
 
-Get the API token, register application, etc.
+Get the API token
+using [this guide](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)
 
-Features
-========
-
-| **Feature**             | **Note**                                      |
-|-------------------------|-----------------------------------------------|
-| Generic UI form         | Dynamic UI form                               |
-| Row Based configuration | Allows structuring the configuration in rows. |
-| oAuth                   | oAuth authentication enabled                  |
-| Incremental loading     | Allows fetching data in new increments.       |
-| Backfill mode           | Support for seamless backfill setup.          |
-| Date range filter       | Specify date range.                           |
-
-Supported endpoints
-===================
-
-If you need more endpoints, please submit your request to
-[ideas.keboola.com](https://ideas.keboola.com/)
 
 Configuration
 =============
 
-Param 1
--------
+##Configuration Schema
 
-Param 2
--------
+- User email (user_email) - [REQ] Email of the user who create the API token
+- Api token (#api_token) - [REQ] API token for JIRA cloud
+- Project (project) - [REQ] Id of project to create the Epic in
+- Server (server) - [REQ] Link to Jira Cloud server, e.g. https://myjira.atlassian.net
+- Epic name (epic_name) - [REQ] Name of the epic to be created
 
-Output
-======
+Sample Configuration
+=============
 
-List of tables, foreign keys, schema.
+```json
+{
+  "parameters": {
+    "user_email": "mail@mail.com",
+    "#api_token": "SECRET_VALUE",
+    "project": "PROJECT_ID",
+    "server": "https://myjira.atlassian.net",
+    "epic_name": "NEW EPIC CREATED BY COMPONENT"
+  },
+  "action": "run"
+}
+```
 
 Development
 -----------
 
-If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to
-your custom path in the `docker-compose.yml` file:
+If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to your custom path in
+the `docker-compose.yml` file:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     volumes:
@@ -59,12 +62,9 @@ your custom path in the `docker-compose.yml` file:
       - ./CUSTOM_FOLDER:/data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Clone this repository, init the workspace and run the component with following
-command:
+Clone this repository, init the workspace and run the component with following command:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-git clone https://bitbucket.org/kds_consulting_team/kds-team.app-jira-epic-creator/src/master/ kds-team.app-jira-epic-creator
-cd kds-team.app-jira-epic-creator
 docker-compose build
 docker-compose run --rm dev
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,5 +79,4 @@ Integration
 ===========
 
 For information about deployment and integration with KBC, please refer to the
-[deployment section of developers
-documentation](https://developers.keboola.com/extend/component/deployment/)
+[deployment section of developers documentation](https://developers.keboola.com/extend/component/deployment/)
