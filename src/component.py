@@ -6,7 +6,6 @@ from jira.resources import Issue
 from typing import Generator, Optional
 
 from keboola.component.dao import TableDefinition
-
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 
@@ -38,6 +37,7 @@ class Component(ComponentBase):
         issues_file = self.get_single_input_table()
 
         jira_client = self.init_jira_client(server, user_email, api_token)
+        logging.info(f"Creating epic {epic_name}")
         new_epic = self.create_new_epic(jira_client, jira_project, epic_name)
         if issues_file:
             self.create_epic_issues(jira_client, jira_project, new_epic, issues_file)
@@ -53,9 +53,7 @@ class Component(ComponentBase):
     @staticmethod
     def get_issue_definitions_from_table(issues_file: TableDefinition) -> Generator:
         with open(issues_file.full_path, 'r') as in_file:
-            reader = csv.DictReader(in_file)
-            for line in reader:
-                yield line
+            yield from csv.DictReader(in_file)
 
     @staticmethod
     def init_jira_client(server: str, user_email: str, api_token: str) -> JIRA:
@@ -79,7 +77,7 @@ class Component(ComponentBase):
     def create_epic_issues(self, jira_client: JIRA, jira_project: str, epic: Issue,
                            issues_file: TableDefinition) -> None:
         for issue in self.get_issue_definitions_from_table(issues_file):
-            logging.info(f"Creating issue ")
+            logging.info(f"Creating issue {issue.get('issue_name')}")
             try:
                 jira_client.create_issue(project=jira_project,
                                          customfield_10014=epic.key,
