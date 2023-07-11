@@ -39,6 +39,13 @@
                   "title": "Epic name",
                   "type": "string",
                   "description": "Name of the epic to be created"
+            },
+            "epic_description": {
+                  "propertyOrder": 51,
+                  "title": "Epic description",
+                  "type": "string",
+                  "format": "textarea",
+                  "description": "Description of the epic to be created"
             }
       }
 }
