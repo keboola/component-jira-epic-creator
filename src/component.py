@@ -86,7 +86,21 @@ class Component(ComponentBase):
                 jira_client.create_issue(project=jira_project,
                                          customfield_10014=epic.key,
                                          summary=issue.get("issue_name"),
-                                         description=issue.get("issue_description"),
+                                         description={
+                                             "type": "doc",
+                                             "version": 1,
+                                             "content": [
+                                                 {
+                                                     "type": "paragraph",
+                                                     "content": [
+                                                         {
+                                                             "type": "text",
+                                                             "text": issue.get("issue_description")
+                                                         }
+                                                     ]
+                                                 }
+                                             ]
+                                         },
                                          issuetype=issue.get("issue_type"))
             except JIRAError as jira_exc:
                 raise UserException("Failed to create epic issue") from jira_exc
