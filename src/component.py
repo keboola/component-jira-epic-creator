@@ -95,7 +95,7 @@ class Component(ComponentBase):
                                                      "content": [
                                                          {
                                                              "type": "text",
-                                                             "text": issue.get("issue_description")
+                                                             "text": issue.get("issue_description", "")
                                                          }
                                                      ]
                                                  }
