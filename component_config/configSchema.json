@@ -47,7 +47,7 @@
       "format": "editor",
       "options": {
         "editor": {
-          "mode": "text/x-sql"
+          "mode": "application/json"
         }
       },
       "description": "Description of the epic to be created"
