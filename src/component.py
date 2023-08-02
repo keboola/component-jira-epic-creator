@@ -9,7 +9,7 @@ from keboola.component.base import ComponentBase
 from keboola.component.dao import TableDefinition
 from keboola.component.exceptions import UserException
 
-KEY_DESCRIPTION = 'description'
+KEY_DESCRIPTION = 'epic_description'
 
 KEY_API_TOKEN = '#api_token'
 KEY_PROJECT = 'project'
@@ -35,7 +35,7 @@ class Component(ComponentBase):
         api_token = params.get(KEY_API_TOKEN)
         jira_project = params.get(KEY_PROJECT)
         epic_name = params.get(KEY_EPIC_NAME)
-        description = params.get(KEY_DESCRIPTION, '')
+        description = params.get(KEY_DESCRIPTION, {})
 
         issues_file = self.get_single_input_table()
 
@@ -61,13 +61,13 @@ class Component(ComponentBase):
     @staticmethod
     def init_jira_client(server: str, user_email: str, api_token: str) -> JIRA:
         try:
-            jira_options = {'server': server}
+            jira_options = {'server': server, 'rest_api_version': '3'}
             return JIRA(options=jira_options, basic_auth=(user_email, api_token))
         except JIRAError as jira_exc:
             raise UserException("Failed to authenticate client, please revalidate your email and token") from jira_exc
 
     @staticmethod
-    def create_new_epic(jira_client: JIRA, jira_project: str, epic_name: str, description: str) -> Issue:
+    def create_new_epic(jira_client: JIRA, jira_project: str, epic_name: str, description: dict = None) -> Issue:
         try:
             return jira_client.create_issue(project=jira_project,
                                             customfield_10011=epic_name,
