@@ -43,7 +43,7 @@ class Component(ComponentBase):
         new_epic = self.copy_epic(jira_client, jira_project, epic_name, original_epic)
         logging.info(f"New epic created with key: {new_epic.key}")
 
-        self.copy_child_issues(jira_client, original_epic, new_epic)
+        self.copy_child_issues(jira_client, jira_project, original_epic, new_epic)
         logging.info(f"Child issues copied from {original_epic_key} to {new_epic.key}")
 
     @staticmethod
@@ -75,7 +75,7 @@ class Component(ComponentBase):
                 "Failed to create new epic, validate that the jira project name and epic name are valid") from jira_exc
 
     @staticmethod
-    def copy_child_issues(jira_client: JIRA, original_epic: Issue, new_epic: Issue):
+    def copy_child_issues(jira_client: JIRA, jira_project, original_epic: Issue, new_epic: Issue):
         jql_query = f'"issueLink" = {original_epic.key}'
         child_issues = jira_client.search_issues(jql_query)
         logging.info(f"Found {len(child_issues)} child issues to copy")
@@ -83,7 +83,7 @@ class Component(ComponentBase):
         for issue in child_issues:
             issue_raw = issue.raw
             fields = {
-                'project': {'key': issue_raw.get('fields', {}).get('project').get('key')},
+                'project': {'key': jira_project},
                 'summary': issue_raw.get('fields', {}).get('summary'),
                 'description': issue_raw.get('fields', {}).get('description'),
                 'issuetype': {'name': issue.fields.issuetype.name},
