@@ -26,7 +26,7 @@
       "propertyOrder": 30,
       "title": "Project",
       "type": "string",
-      "description": "Id of project to create the Epic in"
+      "description": "Id of a project to operate in"
     },
     "server": {
       "propertyOrder": 40,
