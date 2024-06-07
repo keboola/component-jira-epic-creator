@@ -36,13 +36,13 @@
     },
     "epic_name": {
       "propertyOrder": 50,
-      "title": "Epic name",
+      "title": "New Epic name",
       "type": "string",
       "description": "Name of the epic to be created"
     },
     "original_epic_key": {
       "propertyOrder": 50,
-      "title": "Epic name",
+      "title": "Template Epic Key",
       "type": "string",
       "description": "Key of the Template Epic, e.g.: CFT-1092"
     }
