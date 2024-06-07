@@ -3,7 +3,7 @@ Jira Epic Creator
 
 Jira is an issue tracking application.
 
-This application creates an epic with defined issues.
+This application creates an epic with custom name from a Template Epic.
 
 **Table of contents:**
 
@@ -11,10 +11,7 @@ This application creates an epic with defined issues.
 
 Functionality notes
 ===================
-An input table can be used with the following structure:
-"issue_name","issue_description","issue_type"
-
-This will create child issues for the epic.
+The component also copies all child issues.
 
 Prerequisites
 =============
@@ -44,7 +41,8 @@ Sample Configuration
     "#api_token": "SECRET_VALUE",
     "project": "PROJECT_ID",
     "server": "https://myjira.atlassian.net",
-    "epic_name": "NEW EPIC CREATED BY COMPONENT"
+    "epic_name": "NEW EPIC CREATED BY COMPONENT",
+    "original_epic_key": "CFT-1092"
   },
   "action": "run"
 }

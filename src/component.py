@@ -1,15 +1,14 @@
-import csv
 import logging
-from typing import Generator, Optional
 
 from jira import JIRA
 from jira.exceptions import JIRAError
 from jira.resources import Issue
+
 from keboola.component.base import ComponentBase
-from keboola.component.dao import TableDefinition
 from keboola.component.exceptions import UserException
 
 KEY_DESCRIPTION = 'epic_description'
+KEY_ORIGINAL_EPIC = 'original_epic_key'
 
 KEY_API_TOKEN = '#api_token'
 KEY_PROJECT = 'project'
@@ -17,7 +16,7 @@ KEY_SERVER = "server"
 KEY_USER_EMAIL = "user_email"
 KEY_EPIC_NAME = "epic_name"
 
-REQUIRED_PARAMETERS = [KEY_API_TOKEN, KEY_PROJECT, KEY_SERVER, KEY_USER_EMAIL, KEY_EPIC_NAME]
+REQUIRED_PARAMETERS = [KEY_API_TOKEN, KEY_PROJECT, KEY_SERVER, KEY_USER_EMAIL, KEY_EPIC_NAME, KEY_ORIGINAL_EPIC]
 REQUIRED_IMAGE_PARS = []
 
 
@@ -35,28 +34,17 @@ class Component(ComponentBase):
         api_token = params.get(KEY_API_TOKEN)
         jira_project = params.get(KEY_PROJECT)
         epic_name = params.get(KEY_EPIC_NAME)
-        description = params.get(KEY_DESCRIPTION, {})
-
-        issues_file = self.get_single_input_table()
+        original_epic_key = params.get(KEY_ORIGINAL_EPIC)
 
         jira_client = self.init_jira_client(server, user_email, api_token)
-        logging.info(f"Creating epic {epic_name}")
-        new_epic = self.create_new_epic(jira_client, jira_project, epic_name, description)
-        if issues_file:
-            self.create_epic_issues(jira_client, jira_project, new_epic, issues_file)
+        logging.info(f"Copying epic {original_epic_key} to create new epic {epic_name}")
 
-    def get_single_input_table(self) -> Optional[TableDefinition]:
-        input_files = self.get_input_tables_definitions()
-        if len(input_files) == 0:
-            return None
-        if len(input_files) != 1:
-            raise UserException("Have 1 and only 1 input table in the input mapping")
-        return input_files[0]
+        original_epic = jira_client.issue(original_epic_key)
+        new_epic = self.copy_epic(jira_client, jira_project, epic_name, original_epic)
+        logging.info(f"New epic created with key: {new_epic.key}")
 
-    @staticmethod
-    def get_issue_definitions_from_table(issues_file: TableDefinition) -> Generator:
-        with open(issues_file.full_path, 'r') as in_file:
-            yield from csv.DictReader(in_file)
+        self.copy_child_issues(jira_client, original_epic, new_epic)
+        logging.info(f"Child issues copied from {original_epic_key} to {new_epic.key}")
 
     @staticmethod
     def init_jira_client(server: str, user_email: str, api_token: str) -> JIRA:
@@ -64,46 +52,50 @@ class Component(ComponentBase):
             jira_options = {'server': server, 'rest_api_version': '3'}
             return JIRA(options=jira_options, basic_auth=(user_email, api_token))
         except JIRAError as jira_exc:
-            raise UserException("Failed to authenticate client, please revalidate your email and token") from jira_exc
+            raise UserException("Failed to authenticate client, please revalidate your email and token.") from jira_exc
 
     @staticmethod
-    def create_new_epic(jira_client: JIRA, jira_project: str, epic_name: str, description: dict = None) -> Issue:
+    def copy_epic(jira_client: JIRA, jira_project: str, epic_name: str, original_epic: Issue) -> Issue:
+        issue_raw = original_epic.raw
+        description = issue_raw.get('fields', {}).get('description', None)
+
         try:
-            return jira_client.create_issue(project=jira_project,
-                                            customfield_10011=epic_name,
-                                            summary=epic_name,
-                                            description=description,
-                                            issuetype={'name': 'Epic'})
+            fields = {
+                'project': {'key': jira_project},
+                'summary': epic_name,
+                'description': description,
+                'issuetype': {'name': 'Epic'},
+            }
+            logging.info(f"Creating new epic with fields: {fields}")
+            new_epic = jira_client.create_issue(fields=fields)
+            return new_epic
         except JIRAError as jira_exc:
+            logging.error(f"Error response: {jira_exc.response.text}")
             raise UserException(
                 "Failed to create new epic, validate that the jira project name and epic name are valid") from jira_exc
 
-    def create_epic_issues(self, jira_client: JIRA, jira_project: str, epic: Issue,
-                           issues_file: TableDefinition) -> None:
-        for issue in self.get_issue_definitions_from_table(issues_file):
-            logging.info(f"Creating issue {issue.get('issue_name')}")
+    @staticmethod
+    def copy_child_issues(jira_client: JIRA, original_epic: Issue, new_epic: Issue):
+        jql_query = f'"issueLink" = {original_epic.key}'
+        child_issues = jira_client.search_issues(jql_query)
+        logging.info(f"Found {len(child_issues)} child issues to copy")
+
+        for issue in child_issues:
+            issue_raw = issue.raw
+            fields = {
+                'project': {'key': issue_raw.get('fields', {}).get('project').get('key')},
+                'summary': issue_raw.get('fields', {}).get('summary'),
+                'description': issue_raw.get('fields', {}).get('description'),
+                'issuetype': {'name': issue.fields.issuetype.name},
+                'parent': {'key': new_epic.key},
+            }
+            logging.info(f"Creating child issue with fields: {fields}")
             try:
-                jira_client.create_issue(project=jira_project,
-                                         customfield_10014=epic.key,
-                                         summary=issue.get("issue_name"),
-                                         description={
-                                             "type": "doc",
-                                             "version": 1,
-                                             "content": [
-                                                 {
-                                                     "type": "paragraph",
-                                                     "content": [
-                                                         {
-                                                             "type": "text",
-                                                             "text": issue.get("issue_description", "")
-                                                         }
-                                                     ]
-                                                 }
-                                             ]
-                                         },
-                                         issuetype=issue.get("issue_type"))
+                jira_client.create_issue(fields=fields)
             except JIRAError as jira_exc:
-                raise UserException("Failed to create epic issue") from jira_exc
+                logging.error(f"Error response: {jira_exc.response.text}")
+                raise UserException(
+                    f"Failed to create child issue for {issue.key}, validate that the fields are correct") from jira_exc
 
 
 if __name__ == "__main__":
