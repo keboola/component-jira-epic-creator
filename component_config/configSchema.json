@@ -26,7 +26,7 @@
       "propertyOrder": 30,
       "title": "Project",
       "type": "string",
-      "description": "Id of project to create the Epic in"
+      "description": "Id of a project to operate in"
     },
     "server": {
       "propertyOrder": 40,
@@ -36,21 +36,15 @@
     },
     "epic_name": {
       "propertyOrder": 50,
-      "title": "Epic name",
+      "title": "New Epic name",
       "type": "string",
       "description": "Name of the epic to be created"
     },
-    "epic_description": {
-      "propertyOrder": 51,
-      "title": "Epic description object",
-      "type": "object",
-      "format": "editor",
-      "options": {
-        "editor": {
-          "mode": "application/json"
-        }
-      },
-      "description": "Description of the epic to be created"
+    "original_epic_key": {
+      "propertyOrder": 50,
+      "title": "Template Epic Key",
+      "type": "string",
+      "description": "Key of the Template Epic, e.g.: CFT-1092"
     }
   }
 }
